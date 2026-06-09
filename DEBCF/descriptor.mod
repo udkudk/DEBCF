@@ -1,8 +1,8 @@
-version="2026.06.08"
+version="2026.06.09"
 dependencies={}
 tags={
 	"Gameplay"
 	"Utilities"
 }
-name="Startup Events/Effects Framework"
+name="DEBCF: Dynamic Event Booting & Configuration Framework"
 supported_version="v4.3.*"

@@ -1,3 +1,10 @@
+# Created by udkudk
+# This section makes Git ignore "*.bat" Batch Files, and "*.mod" in the Root Folder (/) of the Repository.
+# This doesn't prevent Git from uploading those types of Files in Sub-Folders below Root (/)
+# Thus, this is useful to prevent uploading of Scripts and .mod modding files that exposes "User" specific PATHs and other sensical data.
+/*.mod
+/*.bat
+
 # Created by https://www.toptal.com/developers/gitignore/api/windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows
 

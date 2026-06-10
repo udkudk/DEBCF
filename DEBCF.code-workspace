@@ -1,0 +1,27 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.txt": "stellaris",
+			"*.gfx": "stellaris",
+			"*.mod": "stellaris",
+		},
+		// Removed [] & [x] from TODO search results because it interfers with Markdown Lists in *.md files and causes false positives.
+		"todo-tree.general.tags": [
+			"BUG",
+			"HACK",
+			"FIXME",
+			"TODO",
+			"XXX"
+		]
+	},
+	"extensions": {
+		"recommendations": [
+			"tboby.cwtools-vscode"
+		]
+	}
+}

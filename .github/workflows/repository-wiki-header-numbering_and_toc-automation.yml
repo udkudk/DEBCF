@@ -29,16 +29,60 @@ jobs:
         run: |
           cd wiki-repo
           
-          # 1️⃣ Loop through files to apply sequential header numbers FIRST
+          # 1- NATIVE BASH HEADER NUMBERING MODULE (6 LAYERS)
           for file in *.md; do
             if [[ "$file" != "_*" && "$file" != "_Sidebar.md" && -f "$file" ]]; then
               echo "Applying decimal header numbering to: $file"
-              # Runs markdown-heading-numbering tool to format sections as 1., 1.1., etc.
-              npx -y markdown-heading-numbering "$file" || true
+              
+              # Initialize structural counter depths starting at H1 all the way down to H6
+              c1=0; c2=0; c3=0; c4=0; c5=0; c6=0
+              
+              # Read the file line by line, parse headings, and write to a temporary file
+              while IFS= read -r line || [ -n "$line" ]; do
+                
+                # 🔍 Catches # all the way down to ######
+                if [[ "$line" =~ ^(#+)[[:space:]](.*) ]]; then
+                  hashes="${BASH_REMATCH[1]}"
+                  title="${BASH_REMATCH[2]}"
+                  
+                  # Clean off any previously injected numbering sequences (e.g. "1.2.3. Text")
+                  title=$(echo "$title" | sed -E 's/^[0-9]+(\.[0-9]+)*\.?[[:space:]]+//')
+                  
+                  depth=${#hashes}
+                  
+                  # Adjust counters sequentially based on heading depth
+                  if [ "$depth" -eq 1 ]; then
+                    ((c1++)); c2=0; c3=0; c4=0; c5=0; c6=0
+                    numbering="$c1."
+                  elif [ "$depth" -eq 2 ]; then
+                    ((c2++)); c3=0; c4=0; c5=0; c6=0
+                    numbering="$c1.$c2."
+                  elif [ "$depth" -eq 3 ]; then
+                    ((c3++)); c4=0; c5=0; c6=0
+                    numbering="$c1.$c2.$c3."
+                  elif [ "$depth" -eq 4 ]; then
+                    ((c4++)); c5=0; c6=0
+                    numbering="$c1.$c2.$c3.$c4."
+                  elif [ "$depth" -eq 5 ]; then
+                    ((c5++)); c6=0
+                    numbering="$c1.$c2.$c3.$c4.$c5."
+                  elif [ "$depth" -eq 6 ]; then
+                    ((c6++))
+                    numbering="$c1.$c2.$c3.$c4.$c5.$c6."
+                  fi
+                  
+                  # Output the rebuilt, perfectly numbered header line
+                  echo "$hashes $numbering $title" >> "$file.tmp"
+                else
+                  echo "$line" >> "$file.tmp"
+                fi
+              done < "$file"
+              
+              mv "$file.tmp" "$file"
             fi
           done
 
-          # 2️⃣ Loop through files a second time to parse those newly numbered headers into the TOC
+          # 2- Loop through files a second time to parse those newly numbered headers into the TOC
           # Uses npx to run markdown-toc safely without a marketplace action wrapper
           # It updates every markdown file in place (-i) matching your placeholder
           # Resolves error 1: Added '-y' to npx to skip the interactive installer block

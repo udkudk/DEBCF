@@ -2,13 +2,16 @@ name: Repository Wiki TOC Automation
 
 on:
   gollum: # This triggers the workflow every single time someone edits a Wiki page directly on GitHub!
-  workflow_dispatch: # This lets you run the workflow manually from the Actions tab.
   push:
     branches:
       - main # Triggers if you push changes directly to your main code branch
 
 permissions:
   contents: write # Grants permissions to update the Wiki repository directly
+
+env:
+  # Resolves error 2: Forces actions to use Node 24 natively and clears the deprecation warning
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
 
 jobs:
   wiki-maintenance:
@@ -26,7 +29,15 @@ jobs:
           cd wiki-repo
           # Uses npx to run markdown-toc safely without a marketplace action wrapper
           # It updates every markdown file in place (-i) matching your placeholder
-          npx markdown-toc -i *.md
+          # Resolves error 1: Added '-y' to npx to skip the interactive installer block
+          # 🛠️ THE CRASH FIX: Loop through each markdown file individually. 
+          # The "|| true" statement forces the script to ignore empty wiki pages instead of crashing!
+          for file in *.md; do
+            if [ -f "$file" ]; then
+              echo "Processing Table of Contents for: $file"
+              npx -y markdown-toc -i "$file" || true
+            fi
+          done
 
       - name: Commit and Push Changes back to Wiki Webpage
         run: |

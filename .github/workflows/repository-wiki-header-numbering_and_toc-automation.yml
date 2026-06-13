@@ -1,7 +1,8 @@
-name: Repository Wiki TOC Automation
+name: Repository Wiki TOC & Heading Numbering Automation
 
 on:
   gollum: # This triggers the workflow every single time someone edits a Wiki page directly on GitHub!
+  workflow_dispatch: # Lets you run the workflow manually from the Actions tab.
   push:
     branches:
       - main # Triggers if you push changes directly to your main code branch
@@ -24,9 +25,20 @@ jobs:
           repository: ${{ github.repository }}.wiki 
           path: wiki-repo
 
-      - name: Generate TOC via Native Node Tool
+      - name: Generate Header Numbers and TOC via Native Node Tools
         run: |
           cd wiki-repo
+          
+          # 1️⃣ Loop through files to apply sequential header numbers FIRST
+          for file in *.md; do
+            if [[ "$file" != "_*" && "$file" != "_Sidebar.md" && -f "$file" ]]; then
+              echo "Applying decimal header numbering to: $file"
+              # Runs markdown-heading-numbering tool to format sections as 1., 1.1., etc.
+              npx -y markdown-heading-numbering "$file" || true
+            fi
+          done
+
+          # 2️⃣ Loop through files a second time to parse those newly numbered headers into the TOC
           # Uses npx to run markdown-toc safely without a marketplace action wrapper
           # It updates every markdown file in place (-i) matching your placeholder
           # Resolves error 1: Added '-y' to npx to skip the interactive installer block

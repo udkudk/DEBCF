@@ -29,60 +29,54 @@ jobs:
         run: |
           cd wiki-repo
           # 1- NATIVE BASH HEADER NUMBERING MODULE (6 LAYERS)
-          for file in *.md; do
-            if [[ "$file" != "_*" && "$file" != "_Sidebar.md" && -f "$file" ]]; then
-              echo "Applying decimal header numbering to: $file"
+          # CREATE A ROBUST RUNTIME JS ENGINE SCRIPT TO PROCESS 6 LAYERS
+          cat << 'EOF' > parse-headings.js
+          const fs = require('fs');
+          const path = require('path');
+
+          const files = fs.readdirSync('.').filter(f => f.endsWith('.md') && !f.startsWith('_'));
+
+          files.forEach(file => {
+            try {
+              console.log(`Processing Table of Contents & Numbering for: ${file}`);
+              let content = fs.readFileSync(file, 'utf8');
+              let lines = content.split(/\r?\n/);
               
-              # Initialize structural counter depths starting at H1 all the way down to H6
-              c1=0; c2=0; c3=0; c4=0; c5=0; c6=0
+              let counters =; // h1 through h6 counters
               
-              # Read the file line by line, parse headings, and write to a temporary file
-              while IFS= read -r line || [ -n "$line" ]; do
-                
-                # 🔍 Safely detects markdown headers without using array brackets
-                if [[ "$line" =~ ^(#+)[[:space:]](.*) ]]; then
-                  # Extract the hashes (#, ##, etc.) by removing everything after the space
-                  hashes=$(echo "$line" | cut -d' ' -f1)
-                  # Extract the title by stripping the leading hashes and their trailing space
-                  title=$(echo "$line" | sed -E 's/^#+[[:space:]]+//')
+              let updatedLines = lines.map(line => {
+                // Regex checks for 1 to 6 hash marks followed by a space
+                const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
+                if (match) {
+                  const hashes = match[1];
+                  let title = match[2];
+                  const depth = hashes.length; // Number of hashes indicates header depth
                   
-                  # Clean off any previously injected numbering sequences (e.g. "1.2.3. Text")
-                  title=$(echo "$title" | sed -E 's/^[0-9]+(\.[0-9]+)*\.?[[:space:]]+//')
+                  // Clean off any previously injected numbering systems (e.g., 1.2.3.)
+                  title = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
                   
-                  depth=${#hashes}
+                  // Increment targeted layer, clear lower-level counters
+                  counters[depth - 1]++;
+                  for (let i = depth; i < 6; i++) counters[i] = 0;
                   
-                  # Adjust counters sequentially based on heading depth
-                  if [ "$depth" -eq 1 ]; then
-                    ((c1++)); c2=0; c3=0; c4=0; c5=0; c6=0
-                    numbering="$c1."
-                  elif [ "$depth" -eq 2 ]; then
-                    ((c2++)); c3=0; c4=0; c5=0; c6=0
-                    numbering="$c1.$c2."
-                  elif [ "$depth" -eq 3 ]; then
-                    ((c3++)); c4=0; c5=0; c6=0
-                    numbering="$c1.$c2.$c3."
-                  elif [ "$depth" -eq 4 ]; then
-                    ((c4++)); c5=0; c6=0
-                    numbering="$c1.$c2.$c3.$c4."
-                  elif [ "$depth" -eq 5 ]; then
-                    ((c5++)); c6=0
-                    numbering="$c1.$c2.$c3.$c4.$c5."
-                  elif [ "$depth" -eq 6 ]; then
-                    ((c6++))
-                    numbering="$c1.$c2.$c3.$c4.$c5.$c6."
-                  fi
+                  // Construct numbering prefix string
+                  let numbering = counters.slice(0, depth).join('.') + '.';
                   
-                  # Output the rebuilt, perfectly numbered header line
-                  echo "$hashes $numbering $title" >> "$file.tmp"
-                else
-                  # 🛠️ THE FIX: Uses printf to safely stream text containing code tokens without crashing
-                  printf '%s\n' "$line" >> "$file.tmp"
-                fi
-              done < "$file"
-              
-              mv "$file.tmp" "$file"
-            fi
-          done
+                  return `${hashes} ${numbering} ${title}`;
+                }
+                return line;
+              });
+
+              fs.writeFileSync(file, updatedLines.join('\n'), 'utf8');
+            } catch (err) {
+              console.error(`Skipping or handled error on file ${file}:`, err.message);
+            }
+          });
+          EOF
+
+          # Run the robust header numbering engine
+          node parse-headings.js
+          rm parse-headings.js
 
           # 2- Loop through files a second time to parse those newly numbered headers into the TOC
           # Uses npx to run markdown-toc safely without a marketplace action wrapper

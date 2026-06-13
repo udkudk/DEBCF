@@ -75,7 +75,8 @@ jobs:
                   # Output the rebuilt, perfectly numbered header line
                   echo "$hashes $numbering $title" >> "$file.tmp"
                 else
-                  echo "$line" >> "$file.tmp"
+                  # 🛠️ THE FIX: Uses printf to safely stream text containing code tokens without crashing
+                  printf '%s\n' "$line" >> "$file.tmp"
                 fi
               done < "$file"
               

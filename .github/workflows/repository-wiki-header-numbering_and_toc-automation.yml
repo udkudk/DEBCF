@@ -42,28 +42,33 @@ jobs:
               let content = fs.readFileSync(file, 'utf8');
               let lines = content.split(/\r?\n/);
               
-              // 🛠️ FIX FORCED: Explicitly written 6 zero digits to keep the array intact
-              let counters =; 
+              // 🛠️ NO-BRACKET FIX: Initializes a 6-element zero array without using square brackets!
+              let counters = new Array(6).fill(0); 
               
               let updatedLines = lines.map(line => {
                 // Regex checks for 1 to 6 hash marks followed by a space
                 const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
                 if (match) {
-                  const hashes = match[1];
-                  let title = match[2];
+                  const hashes = match.at(1);
+                  let title = match.at(2);
                   const depth = hashes.length; // Number of hashes indicates header depth
                   
                   // Clean off any previously injected numbering systems (e.g., 1.2.3.)
                   title = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
                   
                   // Increment targeted layer, clear lower-level counters
-                  counters[depth - 1]++;
-                  for (let i = depth; i < 6; i++) counters[i] = 0;
+                  counters.map((val, idx) => {
+                    if (idx === depth - 1) {
+                      counters.set(idx, val + 1);
+                    } else if (idx >= depth) {
+                      counters.set(idx, 0);
+                    }
+                  });
                   
-                  // Construct numbering prefix string
+                  // Construct numbering prefix string safely
                   let numbering = counters.slice(0, depth).join('.') + '.';
                   
-                  return `${hashes} ${numbering} ${title}`;
+                  return hashes + ' ' + numbering + ' ' + title;
                 }
                 return line;
               });
@@ -73,6 +78,12 @@ jobs:
               console.error(`Skipping or handled error on file ${file}:`, err.message);
             }
           });
+          
+          // Helper method injection to replace structural bracket settings
+          Array.prototype.set = function(index, value) {
+            this.splice(index, 1, value);
+            return this;
+          };
           EOF
 
           # Run the robust header numbering engine

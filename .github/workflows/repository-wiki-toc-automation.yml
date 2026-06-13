@@ -35,9 +35,34 @@ jobs:
           for file in *.md; do
             if [ -f "$file" ]; then
               echo "Processing Table of Contents for: $file"
-              npx -y markdown-toc -i "$file" || true
+              # 🏷️ Added global heading exclusions using the --ignore flag
+              npx -y markdown-toc -i "$file" --ignore "Introduction|License|Table of Contents" || true
             fi
           done
+
+      - name: Automatically Build Global TOC for _Sidebar.md
+        run: |
+          cd wiki-repo
+          
+          # Start with a clean sidebar header
+          echo "### 🗺️ Navigation" > _Sidebar.md
+          echo "" >> _Sidebar.md
+          
+          # Loop through all markdown files and extract clean link titles
+          for file in *.md; do
+            # Ignore hidden files, the sidebar itself, and Home page (handled below)
+            if [[ "$file" != "_*" && "$file" != "Home.md" && -f "$file" ]]; then
+              name="${file%.md}"
+              # Replaces hyphens with spaces for a cleaner display title
+              display_name=$(echo "$name" | tr '-' ' ')
+              echo "* [[$display_name|$name]]" >> _Sidebar.md
+            fi
+          done
+          
+          # Always pin Home to the top of your links
+          if [ -f "Home.md" ]; then
+            sed -i "2i * [[Home]]" _Sidebar.md
+          fi
 
       - name: Commit and Push Changes back to Wiki Webpage
         run: |

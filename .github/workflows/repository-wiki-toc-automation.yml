@@ -1,0 +1,29 @@
+name: Repository Wiki TOC Automation
+
+on:
+  gollum: # This triggers the workflow every single time someone edits a Wiki page directly on GitHub!
+  # This lets you run the workflow manually from the Actions tab.
+  workflow_dispatch:
+  push:
+    branches:
+      - main # Triggers if you push changes directly to your main code branch
+
+jobs:
+  wiki-maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Wiki Maintenance Automation
+        uses: ActionsTools/automate-github-wiki-page-maintenance@v1.1.1 # Installs the script engine
+        env:
+          GH_TOKEN: ${{ secrets.Repository_Wiki_TOC_Automation_via_GitHub_Actions_Workflow_Personal_Access_Token }} # Uses your secret token to gain write-access
+        with:
+          # Configuration settings
+          # Inserts individual page TOCs automatically
+          generate_toc: true 
+          # Generates a dynamic global sidebar mapping out all your wiki pages
+          generate_sidebar: true 
+          # Optional: Cleans up orphan formatting rules
+          clean_wiki: true 

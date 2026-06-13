@@ -29,7 +29,7 @@ jobs:
         run: |
           cd wiki-repo
           # 1- NATIVE BASH HEADER NUMBERING MODULE (6 LAYERS)
-          # CREATE A ROBUST RUNTIME JS ENGINE SCRIPT TO PROCESS 6 LAYERS
+           # 🎮 CREATE A ROBUST RUNTIME JS ENGINE SCRIPT TO PROCESS 6 LAYERS
           cat << 'EOF' > parse-headings.js
           const fs = require('fs');
           const path = require('path');
@@ -42,7 +42,8 @@ jobs:
               let content = fs.readFileSync(file, 'utf8');
               let lines = content.split(/\r?\n/);
               
-              let counters =; // h1 through h6 counters
+              // 🛠️ THE FIX: Correctly initialize all 6 layer depth tracking digits
+              let counters =; 
               
               let updatedLines = lines.map(line => {
                 // Regex checks for 1 to 6 hash marks followed by a space

@@ -42,7 +42,7 @@ jobs:
               let content = fs.readFileSync(file, 'utf8');
               let lines = content.split(/\r?\n/);
               
-              // 🛠️ NO-BRACKET FIX: Initializes a 6-element zero array without using square brackets!
+              // NO-BRACKET ARRAY INITIALIZATION
               let counters = new Array(6).fill(0); 
               
               let updatedLines = lines.map(line => {
@@ -56,12 +56,12 @@ jobs:
                   // Clean off any previously injected numbering systems (e.g., 1.2.3.)
                   title = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
                   
-                  // Increment targeted layer, clear lower-level counters
+                  // 🛠️ THE FIX: Use native .splice to modify array elements safely without brackets or custom prototypes
                   counters.map((val, idx) => {
                     if (idx === depth - 1) {
-                      counters.set(idx, val + 1);
+                      counters.splice(idx, 1, val + 1);
                     } else if (idx >= depth) {
-                      counters.set(idx, 0);
+                      counters.splice(idx, 1, 0);
                     }
                   });
                   
@@ -78,12 +78,6 @@ jobs:
               console.error(`Skipping or handled error on file ${file}:`, err.message);
             }
           });
-          
-          // Helper method injection to replace structural bracket settings
-          Array.prototype.set = function(index, value) {
-            this.splice(index, 1, value);
-            return this;
-          };
           EOF
 
           # Run the robust header numbering engine

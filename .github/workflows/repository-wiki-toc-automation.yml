@@ -2,28 +2,43 @@ name: Repository Wiki TOC Automation
 
 on:
   gollum: # This triggers the workflow every single time someone edits a Wiki page directly on GitHub!
-  # This lets you run the workflow manually from the Actions tab.
-  workflow_dispatch:
+  workflow_dispatch: # This lets you run the workflow manually from the Actions tab.
   push:
     branches:
       - main # Triggers if you push changes directly to your main code branch
+
+permissions:
+  contents: write # Grants permissions to update the Wiki repository directly
 
 jobs:
   wiki-maintenance:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout the Wiki Repository
         uses: actions/checkout@v4
-
-      - name: Run Wiki Maintenance Automation
-        uses: ActionsTools/automate-github-wiki-page-maintenance@v1.1.1 # Installs the script engine
-        env:
-          GH_TOKEN: ${{ secrets.Repository_Wiki_TOC_Automation_via_GitHub_Actions_Workflow_Personal_Access_Token }} # Uses your secret token to gain write-access
         with:
-          # Configuration settings
-          # Inserts individual page TOCs automatically
-          generate_toc: true 
-          # Generates a dynamic global sidebar mapping out all your wiki pages
-          generate_sidebar: true 
-          # Optional: Cleans up orphan formatting rules
-          clean_wiki: true 
+          # Targets your hidden secondary Wiki repository instead of code files
+          repository: ${{ github.repository }}.wiki 
+          path: wiki-repo
+
+      - name: Generate TOC via Native Node Tool
+        run: |
+          cd wiki-repo
+          # Uses npx to run markdown-toc safely without a marketplace action wrapper
+          # It updates every markdown file in place (-i) matching your placeholder
+          npx markdown-toc -i *.md
+
+      - name: Commit and Push Changes back to Wiki Webpage
+        run: |
+          cd wiki-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Only push if changes were actually made to headings
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "docs: auto-generate table of contents"
+            git push
+          else
+            echo "No heading updates found. Skipping push."
+          fi

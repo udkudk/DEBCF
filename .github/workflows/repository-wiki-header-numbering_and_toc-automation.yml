@@ -170,6 +170,16 @@ jobs:
             sed -i "2i * [[Home]]" _Sidebar.md
           fi
 
+          # 🧹 THE PLAIN-TEXT SIDEBAR FIX:
+          # This cleans any rogue LaTeX syntax out of the displayed text portion of the wiki link brackets [[Display|Link]]
+          sed -i -E 's/\\textcolor\{[a-zA-Z]+\}//g' _Sidebar.md
+          sed -i -E 's/\\space//g' _Sidebar.md
+          sed -i -E 's/\\&/\&/g' _Sidebar.md
+          sed -i -E 's/\$\$//g' _Sidebar.md
+          sed -i -E 's/\{([a-zA-Z0-9[:space:]_&-]+)\}/\1/g' _Sidebar.md
+          # Clean up any accidental double spaces left behind after stripping keywords
+          sed -i -E 's/[[:space:]]+/ /g' _Sidebar.md
+
       - name: Commit and Push Changes back to Wiki Webpage
         run: |
           cd wiki-repo

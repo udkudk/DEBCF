@@ -13,6 +13,8 @@ permissions:
 env:
   # Resolves error 2: Forces actions to use Node 24 natively and clears the deprecation warning
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
+  # Add or remove ignored headings here separated by a pipe | - Define the exact headings we want to skip numbering, TOC and ignore completely
+  GLOBAL_IGNORED_HEADINGS: "Introduction|License|Table of Contents"
 
 jobs:
   wiki-maintenance:
@@ -28,13 +30,17 @@ jobs:
       - name: Generate Header Numbers and TOC via Native Node Tools
         run: |
           cd wiki-repo
-          # 1- NATIVE BASH HEADER NUMBERING MODULE (6 LAYERS)
-          # CREATE A ROBUST RUNTIME JS ENGINE SCRIPT TO PROCESS 6 LAYERS
+
+          # 1- NATIVE BASH HEADER NUMBERING MODULE (6 LAYERS of Headers)
+          # CREATE AN UPDATED JS ENGINE THAT READS THE ENV VARIABLE
           cat << 'EOF' > parse-headings.js
           const fs = require('fs');
           const path = require('path');
 
           const files = fs.readdirSync('.').filter(f => f.endsWith('.md') && !f.startsWith('_'));
+
+          // 🛠️ GRAB GLOBAL EXCLUSIONS DIRECTLY FROM THE WORKFLOW ENV ENVIRONMENT
+          const ignoredHeadings = process.env.GLOBAL_IGNORED_HEADINGS.split('|');
 
           files.forEach(file => {
             try {
@@ -50,13 +56,33 @@ jobs:
                 const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
                 if (match) {
                   const hashes = match.at(1);
-                  let title = match.at(2);
-                  const depth = hashes.length; // Number of hashes indicates header depth
+                  let title = match.at(2).trim();
                   
                   // Clean off any previously injected numbering systems (e.g., 1.2.3.)
                   title = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
                   
-                  // 🛠️ THE FIX: Use native .splice to modify array elements safely without brackets or custom prototypes
+                  // STRIP LATEX MATH STRINGS TEMPORARILY JUST FOR BLANK/IGNORE CHECKS
+                  let plainText = title
+                    .replace(/\$\$/g, '')
+                    .replace(/\\textcolor\{[a-zA-Z]+\}/g, '')
+                    .replace(/\\space/g, '')
+                    .replace(/\\&/g, '')
+                    .replace(/[\{\}]/g, '')
+                    .trim();
+
+                  // Only skip if the heading is completely blank after stripping syntax
+                  if (plainText === '') {
+                    return line;
+                  }
+
+                  // Check plain text against our shared exclusion list (ignores case)
+                  if (ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) {
+                    return hashes + ' ' + title;
+                  }
+                  
+                  const depth = hashes.length; // Number of hashes indicates header depth
+                  
+                  // Use native .splice to modify array elements safely without brackets
                   counters.map((val, idx) => {
                     if (idx === depth - 1) {
                       counters.splice(idx, 1, val + 1);
@@ -94,7 +120,7 @@ jobs:
             if [ -f "$file" ]; then
               echo "Processing Table of Contents for: $file"
               # 🏷️ Added global heading exclusions using the --ignore flag
-              npx -y markdown-toc -i "$file" --ignore "Introduction|License|Table of Contents" || true
+              npx -y markdown-toc -i "$file" --ignore "$GLOBAL_IGNORED_HEADINGS" || true
             fi
           done
 

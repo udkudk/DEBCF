@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Wiki Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # Targets your hidden secondary Wiki repository instead of code files
           repository: ${{ github.repository }}.wiki 

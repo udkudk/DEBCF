@@ -51,8 +51,17 @@ jobs:
           # Loop through all markdown files and extract clean link titles
           for file in *.md; do
             # Ignore hidden files, the sidebar itself, and Home page (handled below)
+            # ⏬ "$file" != "_*" means it COMPLETELY IGNORES "_Sidebar.md" automatically!
+            
             if [[ "$file" != "_*" && "$file" != "Home.md" && -f "$file" ]]; then
               name="${file%.md}"
+              
+              # Optional: Skip specific header file names using the pipe separator
+              if [[ "$name" =~ ^(Introduction|License|Table of Contents)$ ]]; then
+                echo "Skipping sidebar link for: $file"
+                continue
+              fi
+
               # Replaces hyphens with spaces for a cleaner display title
               display_name=$(echo "$name" | tr '-' ' ')
               echo "* [[$display_name|$name]]" >> _Sidebar.md

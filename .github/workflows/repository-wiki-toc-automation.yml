@@ -53,11 +53,11 @@ jobs:
             # Ignore hidden files, the sidebar itself, and Home page (handled below)
             # ⏬ "$file" != "_*" means it COMPLETELY IGNORES "_Sidebar.md" automatically!
             
-            if [[ "$file" != "_*" && "$file" != "Home.md" && -f "$file" ]]; then
+            if [[ "$file" != "_*" && "$file" != "Home.md" && "$file" != "_Sidebar.md" && -f "$file" ]]; then
               name="${file%.md}"
               
               # Optional: Skip specific header file names using the pipe separator
-              if [[ "$name" =~ ^(Introduction|License|Table of Contents)$ ]]; then
+              if [[ "$name" =~ ^(Introduction|License|Table of Contents|_Sidebar)$ ]]; then
                 echo "Skipping sidebar link for: $file"
                 continue
               fi

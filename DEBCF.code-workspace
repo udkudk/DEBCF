@@ -1,6 +1,10 @@
 {
 	"folders": [
 		{
+			// This Multi-Root Workspace includes;
+			// - DEBCF      >> Main Repository
+			// - DEBCF.wiki >> Github Wiki Repo
+			// This ".code-workspace" is in "DEBCF" Folder to enable Backup of this file to the Main Repo, so it needs ".." to scope to the "../" folders, which are listed above.
 			"path": ".."
 		}
 	],

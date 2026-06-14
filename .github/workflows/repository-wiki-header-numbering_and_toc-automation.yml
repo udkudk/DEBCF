@@ -221,7 +221,7 @@ jobs:
           node parse-headings.js
           rm parse-headings.js
 
-           # =========================================================================
+          # =========================================================================
           # 🔄 2- Loop through files a second time to parse those newly numbered headers into the TOC
           # Uses npx to run markdown-toc safely without a marketplace action wrapper
           # It updates every markdown file in place (-i) matching your placeholder

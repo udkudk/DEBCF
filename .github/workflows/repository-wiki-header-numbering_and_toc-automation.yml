@@ -150,10 +150,10 @@ jobs:
                 }
               });
 
-              // Reset structural counter depth matrix for the actual rewrite injection pass
+              // Reset structural counter depth matrix for the actual heading update pass
               counters.fill(0);
 
-              let updatedLines = lines.map(line => {
+              let processedLines = lines.map(line => {
                 const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
                 if (match) {
                   const hashes = match.at(1);
@@ -173,6 +173,8 @@ jobs:
 
                   // Only skip if the heading is completely blank after stripping syntax
                   if (plainText === '') return line;
+                  
+                  // Check plain text against our shared exclusion list (ignores case)
                   if (ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) {
                     return hashes + ' ' + title;
                   }
@@ -186,30 +188,34 @@ jobs:
                   let numbering = counters.slice(0, depth).join('.') + '.';
                   return hashes + ' ' + numbering + ' ' + title;
                 }
-
-                // 🌐 REPAIR BOTH INTERNAL AND EXTERNAL MARKDOWN ANCHOR LINKS
-                let alteredLine = line;
-                
-                // First pass: Resolve global cross-file link dependencies
-                Object.keys(globalLinkMaps).forEach(globalTarget => {
-                  const destinationAnchor = globalLinkMaps[globalTarget];
-                  const escapedGlobalTarget = globalTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                  const crossLinkRegex = new RegExp(`\\]\\(${escapedGlobalTarget}\\)`, 'g');
-                  alteredLine = alteredLine.replace(crossLinkRegex, `](${destinationAnchor})`);
-                });
-
-                // Second pass: Resolve local file-level links contextually
-                Object.keys(localFileMap).forEach(localTarget => {
-                  const destinationAnchor = localFileMap[localTarget];
-                  const escapedLocalTarget = localTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                  const localLinkRegex = new RegExp(`\\]\\(${escapedLocalTarget}\\)`, 'g');
-                  alteredLine = alteredLine.replace(localLinkRegex, `](${destinationAnchor})`);
-                });
-
-                return alteredLine;
+                return line;
               });
 
-              fs.writeFileSync(file, updatedLines.join('\n'), 'utf8');
+              // 🌐 THE FIX: Join all lines into a single document string block for foolproof global replacements
+              let entireDocumentText = processedLines.join('\n');
+
+              // First pass: Resolve global cross-file link dependencies across the entire file at once
+              Object.keys(globalLinkMaps).forEach(globalTarget => {
+                const destinationAnchor = globalLinkMaps[globalTarget];
+                // Escape regex specific keys securely
+                const escapedGlobalTarget = globalTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                // Regex target structures like ](Page-Name#old-slug)
+                const crossLinkRegex = new RegExp('\\]\\(' + escapedGlobalTarget + '\\)', 'g');
+                
+                // Explicitly provide replacement string via function callback to avoid token parsing traps
+                entireDocumentText = entireDocumentText.replace(crossLinkRegex, () => '](' + destinationAnchor + ')');
+              });
+
+              // Second pass: Resolve local inner-file link structures across the entire file at once
+              Object.keys(localFileMap).forEach(localTarget => {
+                const destinationAnchor = localFileMap[localTarget];
+                const escapedLocalTarget = localTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                const localLinkRegex = new RegExp('\\]\\(' + escapedLocalTarget + '\\)', 'g');
+                
+                entireDocumentText = entireDocumentText.replace(localLinkRegex, () => '](' + destinationAnchor + ')');
+              });
+
+              fs.writeFileSync(file, entireDocumentText, 'utf8');
             } catch (err) {
               console.error(`Error applying changes to file ${file}:`, err.message);
             }

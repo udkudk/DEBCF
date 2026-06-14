@@ -1,4 +1,4 @@
-# Contributing to [DEBCF: Dynamic Event Booting & Configuration Framework]
+# Contributing to DEBCF: Dynamic Event Booting & Configuration Framework
 
 Thank you for your interest in helping improve this Stellaris mod! To maintain a stable mod files environment and clear legal boundaries under our Apache 2.0 license, we require all contributors to use the following workflow.
 

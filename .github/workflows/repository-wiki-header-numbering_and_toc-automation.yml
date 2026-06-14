@@ -27,40 +27,141 @@ jobs:
           repository: ${{ github.repository }}.wiki 
           path: wiki-repo
 
-      - name: Generate Header Numbers and TOC via Native Node Tools
+      - name: Generate Header Numbers, TOC, and Repair Global Cross-Page Links (6 LAYERS of Headers), also PREPARES LATEX HEADINGS FOR THE TOC
         run: |
           cd wiki-repo
-
-          # 1- NATIVE BASH HEADER NUMBERING MODULE (6 LAYERS of Headers)
-          # CREATE AN UPDATED JS ENGINE THAT READS THE ENV VARIABLE, and also PREPARES LATEX HEADINGS FOR THE TOC
+          
+          # 🎮 CREATE A COMPREHENSIVE OMNISCIENT CROSS-REFERENCE ENGINE
           cat << 'EOF' > parse-headings.js
           const fs = require('fs');
           const path = require('path');
 
           const files = fs.readdirSync('.').filter(f => f.endsWith('.md') && !f.startsWith('_'));
-
-          // GRAB GLOBAL EXCLUSIONS DIRECTLY FROM THE WORKFLOW ENV ENVIRONMENT
           const ignoredHeadings = process.env.GLOBAL_IGNORED_HEADINGS.split('|');
 
+          // Helper function to simulate GitHub's native anchor slug generation logic
+          // STRIP LATEX MATH STRINGS TEMPORARILY JUST FOR BLANK/IGNORE CHECKS
+          function slugify(text) {
+            return text
+              .toLowerCase()
+              .replace(/\$\$/g, '')
+              .replace(/\\textcolor\{[a-zA-Z]+\}/g, '')
+              .replace(/\\space/g, '')
+              .replace(/\\&/g, '')
+              .replace(/[\{\}]/g, '')
+              .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+              .trim()
+              .replace(/[\s_]+/g, '-')      // Convert spaces/underscores to hyphens
+              .replace(/-+/g, '-');         // Deduplicate multiple hyphens
+          }
+
+          // Global map object tracking: { 'Page-Name#old-slug': 'Page-Name#new-slug' }
+          let globalLinkMaps = {};
+
+          // ==========================================
+          // PASS 1: SCAN ALL FILES & POPULATE CROSS-REFERENCE DATABASE
+          // ==========================================
           files.forEach(file => {
             try {
-              console.log(`Processing Table of Contents & Numbering for: ${file}`);
               let content = fs.readFileSync(file, 'utf8');
               let lines = content.split(/\r?\n/);
-              
-              // NO-BRACKET ARRAY INITIALIZATION
               let counters = new Array(6).fill(0); 
-              
-              let updatedLines = lines.map(line => {
-                // Regex checks for 1 to 6 hash marks followed by a space
+              const pageName = path.basename(file, '.md');
+
+              lines.forEach(line => {
                 const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
                 if (match) {
                   const hashes = match.at(1);
                   let title = match.at(2).trim();
+
+                  // Clean off any old numbering sequences to compute the pure original slug (e.g., 1.2.3.)
+                  let pureTitle = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
+                  let oldSlug = slugify(pureTitle);
+
+                  // STRIP LATEX MATH STRINGS TEMPORARILY JUST FOR BLANK/IGNORE CHECKS
+                  let plainText = pureTitle
+                    .replace(/\$\$/g, '')
+                    .replace(/\\textcolor\{[a-zA-Z]+\}/g, '')
+                    .replace(/\\space/g, '')
+                    .replace(/\\&/g, '')
+                    .replace(/[\{\}]/g, '')
+                    .trim();
+
+                  if (plainText === '' || ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) {
+                    return; 
+                  }
+
+                  const depth = hashes.length;
+                  counters.map((val, idx) => {
+                    if (idx === depth - 1) counters.splice(idx, 1, val + 1);
+                    else if (idx >= depth) counters.splice(idx, 1, 0);
+                  });
+
+                  let numbering = counters.slice(0, depth).join('.') + '.';
+                  let newSlug = slugify(`${numbering} ${pureTitle}`);
+
+                  // Map explicit global cross-file references cleanly
+                  globalLinkMaps[`${pageName}#${oldSlug}`] = `${pageName}#${newSlug}`;
                   
-                  // Clean off any previously injected numbering systems (e.g., 1.2.3.)
+                  // Handle cases where cross-references use spaces instead of hyphens
+                  const spacedPageName = pageName.replace(/-/g, ' ');
+                  globalLinkMaps[`${spacedPageName}#${oldSlug}`] = `${pageName}#${newSlug}`;
+                }
+              });
+            } catch (err) {
+              console.error(`Error mapping headings for file ${file}:`, err.message);
+            }
+          });
+
+          // ==========================================
+          // PASS 2: APPLY NUMBERS & EXECUTE GLOBAL REWRITES
+          // ==========================================
+          files.forEach(file => {
+            try {
+              let content = fs.readFileSync(file, 'utf8');
+              let lines = content.split(/\r?\n/);
+              let counters = new Array(6).fill(0); 
+              const pageName = path.basename(file, '.md');
+
+              // Create a local-only slice subset map to handle inner-file links safely
+              let localFileMap = {};
+              
+              lines.forEach(line => {
+                const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
+                if (match) {
+                  const hashes = match.at(1);
+                  let title = match.at(2).trim();
+                  let pureTitle = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
+                  let oldSlug = slugify(pureTitle);
+                  
+                  // STRIP LATEX MATH STRINGS TEMPORARILY JUST FOR BLANK/IGNORE CHECKS
+                  let plainText = pureTitle.replace(/\$\$/g, '').replace(/\\textcolor\{[a-zA-Z]+\}/g, '').replace(/\\space/g, '').replace(/\\&/g, '').replace(/[\{\}]/g, '').trim();
+                  if (plainText === '' || ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) return;
+
+                  const depth = hashes.length;
+                  counters.map((val, idx) => {
+                    if (idx === depth - 1) counters.splice(idx, 1, val + 1);
+                    else if (idx >= depth) counters.splice(idx, 1, 0);
+                  });
+                  let numbering = counters.slice(0, depth).join('.') + '.';
+                  let newSlug = slugify(`${numbering} ${pureTitle}`);
+                  
+                  localFileMap[`#${oldSlug}`] = `#${newSlug}`;
+                }
+              });
+
+              // Reset structural counter depth matrix for the actual rewrite injection pass
+              counters.fill(0);
+
+              let updatedLines = lines.map(line => {
+                const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
+                if (match) {
+                  const hashes = match.at(1);
+                  let title = match.at(2).trim();
+
+                  // Strip old numbers (Clean off any previously injected numbering systems (e.g., 1.2.3.))
                   title = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
-                  
+
                   // STRIP LATEX MATH STRINGS TEMPORARILY JUST FOR BLANK/IGNORE CHECKS
                   let plainText = title
                     .replace(/\$\$/g, '')
@@ -71,42 +172,51 @@ jobs:
                     .trim();
 
                   // Only skip if the heading is completely blank after stripping syntax
-                  if (plainText === '') {
-                    return line;
-                  }
-
-                  // Check plain text against our shared exclusion list (ignores case)
+                  if (plainText === '') return line;
                   if (ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) {
                     return hashes + ' ' + title;
                   }
-                  
-                  const depth = hashes.length; // Number of hashes indicates header depth
-                  
-                  // Use native .splice to modify array elements safely without brackets
+
+                  const depth = hashes.length;
                   counters.map((val, idx) => {
-                    if (idx === depth - 1) {
-                      counters.splice(idx, 1, val + 1);
-                    } else if (idx >= depth) {
-                      counters.splice(idx, 1, 0);
-                    }
+                    if (idx === depth - 1) counters.splice(idx, 1, val + 1);
+                    else if (idx >= depth) counters.splice(idx, 1, 0);
                   });
-                  
-                  // Construct numbering prefix string safely
+
                   let numbering = counters.slice(0, depth).join('.') + '.';
-                  
                   return hashes + ' ' + numbering + ' ' + title;
                 }
-                return line;
+
+                // 🌐 REPAIR BOTH INTERNAL AND EXTERNAL MARKDOWN ANCHOR LINKS
+                let alteredLine = line;
+                
+                // First pass: Resolve global cross-file link dependencies
+                Object.keys(globalLinkMaps).forEach(globalTarget => {
+                  const destinationAnchor = globalLinkMaps[globalTarget];
+                  const escapedGlobalTarget = globalTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                  const crossLinkRegex = new RegExp(`\\]\\(${escapedGlobalTarget}\\)`, 'g');
+                  alteredLine = alteredLine.replace(crossLinkRegex, `](${destinationAnchor})`);
+                });
+
+                // Second pass: Resolve local file-level links contextually
+                Object.keys(localFileMap).forEach(localTarget => {
+                  const destinationAnchor = localFileMap[localTarget];
+                  const escapedLocalTarget = localTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                  const localLinkRegex = new RegExp(`\\]\\(${escapedLocalTarget}\\)`, 'g');
+                  alteredLine = alteredLine.replace(localLinkRegex, `](${destinationAnchor})`);
+                });
+
+                return alteredLine;
               });
 
               fs.writeFileSync(file, updatedLines.join('\n'), 'utf8');
             } catch (err) {
-              console.error(`Skipping or handled error on file ${file}:`, err.message);
+              console.error(`Error applying changes to file ${file}:`, err.message);
             }
           });
           EOF
 
-          # Run the robust header numbering engine
+          # Run the cross-reference processing engine
           node parse-headings.js
           rm parse-headings.js
 
@@ -116,7 +226,6 @@ jobs:
           # Resolves error 1: Added '-y' to npx to skip the interactive installer block
           # 🛠️ THE CRASH FIX: Loop through each markdown file individually. 
           # The "|| true" statement forces the script to ignore empty wiki pages instead of crashing!
-
           for file in *.md; do
             if [ -f "$file" ]; then
               echo "Processing Table of Contents for: $file"
@@ -126,7 +235,7 @@ jobs:
               # 🧹 THE ULTIMATE GHOST BUSTER FIX: 
               # Instantly deletes any empty list entries matching '* [](#)' or whitespace variants generated by markdown-toc
               sed -i -E '/^[[:space:]]*\*[[:space:]]*\[\]\(#\)[[:space:]]*$/d' "$file"
-
+              
               # 🛠️ THE PLAIN-TEXT TOC FIX: Cleans the internal text inside links generated by markdown-toc
               # This strips math syntax elements only inside the [anchor text] sections of the TOC block
               sed -i -E '/^[[:space:]]*\*/s/\\textcolor\{[a-zA-Z]+\}//g' "$file"
@@ -149,16 +258,16 @@ jobs:
           for file in *.md; do
             # Ignore hidden files, the sidebar itself, and Home page (handled below)
             # ⏬ "$file" != "_*" means it COMPLETELY IGNORES "_Sidebar.md" automatically!
-            
+
             if [[ "$file" != "_*" && "$file" != "Home.md" && "$file" != "_Sidebar.md" && -f "$file" ]]; then
               name="${file%.md}"
-
+              
               # Keeps the sidebar sync rule aligned with the shared env variable as well!
               if [[ "$name" =~ ^($GLOBAL_IGNORED_HEADINGS|_Sidebar)$ ]]; then
                 echo "Skipping sidebar link for: $file"
                 continue
               fi
-
+              
               # Replaces hyphens with spaces for a cleaner display title
               display_name=$(echo "$name" | tr '-' ' ')
               echo "* [[$display_name|$name]]" >> _Sidebar.md
@@ -176,20 +285,19 @@ jobs:
           sed -i -E 's/\\space//g' _Sidebar.md
           sed -i -E 's/\\&/\&/g' _Sidebar.md
           sed -i -E 's/\$\$//g' _Sidebar.md
-          sed -i -E 's/\{([a-zA-Z0-9[:space:]_&-]+)\}/\1/g' _Sidebar.md
           # Clean up any accidental double spaces left behind after stripping keywords
+          sed -i -E 's/\{([a-zA-Z0-9[:space:]_&-]+)\}/\1/g' _Sidebar.md
           sed -i -E 's/[[:space:]]+/ /g' _Sidebar.md
 
       - name: Commit and Push Changes back to Wiki Webpage
         run: |
           cd wiki-repo
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@://github.com"
           
-          # Only push if changes were actually made to headings
           if [ -n "$(git status --porcelain)" ]; then
             git add .
-            git commit -m "docs: auto-generate table of contents"
+            git commit -m "docs: auto-generate table of contents and repair cross-page references"
             git push
           else
             echo "No heading updates found. Skipping push."

@@ -34,25 +34,188 @@ jobs:
           cd wiki-repo
           
           # =========================================================================
-          # 🎮 THE BASE64 COMPILER FIX:
-          # This writes the Pass 1 mapping engine code directly to memory via a binary buffer.
-          # This completely prevents nested quotes or symbols from breaking the shell interpreter!
+          # 🧠 STEP 1: INITIALIZE THE DISTRIBUTED TWO-PASS TEXT COMPILER
+          # We write the JavaScript engine to a temporary file via standard shell streams.
+          # The entire script remains completely readable and editable.
           # =========================================================================
-          node -e "
+          cat << 'EOF' > parse-headings.js
           const fs = require('fs');
-          const scriptCode = Buffer.from('Y29uc3QgZnMgPSByZXF1aXJlKCdmcycpOwpjb25zdCBwYXRoID0gcmVxdWlyZSgncGF0aCcpOwpjb25zdCBmaWxlcyA9IGZzLnJlYWRkaXJTeW5jKCcuJykuZmlsdGVyKGYgPT4gZi5lbmRzV2l0aCgnLm1kJykgJiYgIWYuc3RhcnRzV2l0aCgnXycpKTsKY29uc3QgaWdub3JlZEhlYWRpbmdzID0gcHJvY2Vzcy5lbnYuR0xPQkFMX0lHTk9SRURfSEVBRElOR1Muc3BsaXQoJ3wnKTsKCmZ1bmN0aW9uIHNsdWdpZnkodGV4dCkgewogIHJldHVybiB0ZXh0CiAgICAudG9Mb3dlckNhc2UoKQogICAgLnJlcGxhY2UoL1xcJFxcJC9nLCAnJykKICAgIC5yZXBsYWNlKC8cXFxsdGV4dGNvbG9yXFx7W2EtekEtWl0rXFx9L2csICcnKQogICAgLnJlcGxhY2UoL1xcXFxzcGFjZS9nLCAnJykKICAgIC5yZXBsYWNlKC8cXFxcJi9nLCAnJykKICAgIC5yZXBsYWNlKC9bXFx7XFx9XS9nLCAnJykKICAgIC5yZXBsYWNlKC9bXmEtejAtOXxzLV0vZywgJycpCiAgICAudHJpbSgpCiAgICAucmVwbGFjZSgvW1xzX10rL2csICctJykKICAgIC5yZXBsYWNlKC8tKy9nLCAnLScpOwp9CgpsZXQgZ2xvYmFsTGlua01hcHMgPSB7fTsKCmZpbGVzLmZvckVhY2goZmlsZSA9PiB7CiAgdHJ5IHsKICAgIGxldCBjb250ZW50ID0gZnMucmVhZEZpbGVTeW5jKGZpbGUsICd1dGY4Jyk7CiAgICBsZXQgbGluZXMgPSBjb250ZW50LnNwbGl0KC9cXHI/XFxuLyk7CiAgICBsZXQgY291bnRlcnMgPSBuZXcgQXJyYXkoNikuZmlsbCgwKTsKICAgIGNvbnN0IHBhZ2VOYW1lID0gcGF0aC5iYXNlbmFtZShmaWxlLCAnLm1kJyk7CgogICAgbGluZXMuZm9yRXFjaChsaW5lID0+IHsKICAgICAgY29uc3QgbWF0Y2ggPSBsaW5lLm1hdGNoKC9eKCN7MSw2fSlbIFx0XSsoLiopJC8pOwogICAgICBpZiAobWF0Y2gpIHsKICAgICAgICBjb25zdCBoYXNoZXMgPSBtYXRjaC5hdCgxKTsKICAgICAgICBsZXQgdGl0bGUgPSBtYXRjaC5hdCgyKS50cmltKCk7CiAgICAgICAgbGV0IHB1cmVUaXRsZSA9IHRpdGxlLnJlcGxhY2UoL15bMC05XSsoXFwuWzAtOV0rKSpcXC4/WyBcdF0rLywgJycpOwogICAgICAgIGxldCBvbGRTbHVnID0gc2x1Z2lmeShwdXJlVGl0bGUpOwogICAgICAgIGxldCBwbGFpblRleHQgPSBwdXJlVGl0bGUKICAgICAgICAgIC5yZXBsYWNlKC9cXCRcXCQvZywgJycpCiAgICAgICAgICAucmVwbGFjZSgvXFxcXHRleHRjb2xvclxce1thLXpBLVpdK1xceS9nLCAnJykKICAgICAgICAgIC5yZXBsYWNlKC9cXFxcc3BhY2UvZywgJycpCiAgICAgICAgICAucmVwbGFjZSgvXFxcXCYvZywgJycpCiAgICAgICAgICAucmVwbGFjZSgvW1xce1xcfV0vZywgJycpCiAgICAgICAgICAudHJpbSgpOwoKICAgICAgIGlmIChwbGFpblRleHQgPT09ICcnIHx8IGlnbm9yZWRIZWFkaW5ncy5zb21lKGlnbm9yZWQgPT4gcGxhaW5UZXh0LnRvTG93ZXJDYXNlKCkpID09PSBpZ25vcmVkLnRvTG93ZXJDYXNlKCkpKSByZXR1cm47CgogICAgICBjb25zdCBkZXB0aCA9IGhhc2hlcy5sZW5ndGg7CiAgICAgIGNvdW50ZXJzLm1hcCgodmFsLCBpZHgpID0+IHsKICAgICAgICBpZiAoaWR4ID09PSBkZXB0aCAtIDEpIGNvdW50ZXJzLnNwbGljZShpZHgsIDEsIHZhbCArIDEpOwogICAgICAgIGVsc2UgaWYgKGlkeCA+PSBkZXB0aCkgY291bnRlcnMuc3BsaWNlKGlkeCwgMSwgMCk7CiAgICAgIH0pOwogICAgICBsZXQgbnVtYmVyaW5nID0gY291bnRlcnMuc2xpY2UoMCwgZGVwdGgpLmpvaW4oJy4nKSArICcuJzsKICAgICAgbGV0IG5ld1NsdWcgPSBzbHVnaWZ5KGAke251bWJlcmluZ30gJHpwdXJlVGl0bGV9YCk7CgogICAgICBnbG9iYWxMaW5rTWFwcyBgJHtwYWdlTmFtZX0jJHtvbGRTbHVnfWAgPSBgJHtwYWdlTmFtZX0jJHtuZXdTbHVnfWA7CiAgICAgIGNvbnN0IHNwYWNlZFBhZ2VOYW1lID0gcGFnZU5hbWUucmVwbGFjZSgvLS9nLCAnICcpOwogICAgICBnbG9iYWxMaW5rTWFwc2BgJHtzcGFjZWRQYWdlTmFtZX0jJHtvbGRTbHVnfWAgPSBgJHtwYWdlTmFtZX0jJHtuZXdTbHVnfWA7CiAgICAgIH0KICAgIH0pOwogIH0gY2F0Y2ggKGVycikgeyBjb25zb2xlLmVycm9yKGBFcnJvciBtYXBwaW5nIGhlYWRpbmdzIGZvciBmaWxlICR7ZmlsZX06YCwgZXJyLm1lc3NhZ2UpOyB9Cn0pOw==', 'base64').toString('utf8');
-          fs.writeFileSync('parse-headings.js', scriptCode, 'utf8');
-          "
+          const path = require('path');
 
-          # =========================================================================
-          # 🎮 CHRONOLOGICAL REWRITE & IN-LINE CLEANER (PASS 2):
-          # Appends the text assignment logic directly into our running Node.js compiler.
-          # This sweeps documents as single text blocks to ensure all links are fully updated.
-          # =========================================================================
-          node -e "
-          const fs = require('fs');
-          const scriptAppend = Buffer.from('ZmlsZXMuZm9yRXFjaChmaWxlID0+IHsKICB0cnkgewogICAgbGV0IGNvbnRlbnQgPSBmcy5yZWFkRmlsZVN5bmMoZmlsZSwgJ3V0ZjgnKTsKICAgIGxldCBsaW5lcyA9IGNvbnRlbnQuc3BsaXQoL1xyP1xuLyk7CiAgICBsZXQgY291bnRlcnMgPSBuZXcgQXJyYXkoNikuZmlsbCgwKTsKICAgIGNvbnN0IHBhZ2VOYW1lID0gcGF0aC5iYXNlbmFtZShmaWxlLCAnLm1kJyk7CiAgICBsZXQgbG9jYWxGaWxlTWFwID0ge307CgogICAgbGluZXMuZm9yRXFjaChsaW5lID0+IHsKICAgICAgY29uc3QgbWF0Y2ggPSBsaW5lLm1hdGNoKC9eKCN7MSw2fSlbIFx0XSsoLiopJC8pOwogICAgICBpZiAobWF0Y2gpIHsKICAgICAgICBjb25zdCBoYXNoZXMgPSBtYXRjaC5hdCgxKTsKICAgICAgICBsZXQgdGl0bGUgPSBtYXRjaC5hdCgyKS50cmltKCk7CiAgICAgICAgbGV0IHB1cmVUaXRsZSA9IHRpdGxlLnJlcGxhY2UoL15bMC05XSsoXFwuWzAtOV0rKSpcXC4/WyBcdF0rLywgJycpOwogICAgICAgIGxldCBvbGRTbHVnID0gc2x1Z2lmeShwdXJlVGl0bGUpOwogICAgICAgIGxldCBwbGFpblRleHQgPSBwdXJlVGl0bGUucmVwbGFjZSgvXFwkXFwkL2csICcnKS5yZXBsYWNlKC9cXFxcdGV4dGNvbG9yXFx7W2EtekEtWl0rXFx9L2csICcnKQogICAgICAgIC5yZXBsYWNlKC9cXFxcc3BhY2UvZywgJycpLnJlcGxhY2UoL1xcXFwmL2csICcnKS5yZXBsYWNlKC9bXFx7XFx9XS9nLCAnKS50cmltKCk7CiAgICAgICAgaWYgKHBsYWluVGV4dCA9PT0gJycgfHwgaWdub3JlZEhlYWRpbmdzLnNvbWUoaWdub3JlZCA9PiBwbGFpblRleHQudG9Mb3dlckNhc2UoKSA9PT0gaWdub3JlZC50b0xvd2VyQ2FzZSgpKSkgcmV0dXJuOwogICAgICAgIGNvbnN0IGRlcHRoID0gaGFzaGVzLmxlbmd0aDsKICAgICAgICBjb3VudGVycy5tYXAoKHZhbCwgaWR4KSA9PiB7CiAgICAgICAgICBpZiAoaWR4ID09PSBkZXB0aCAtIDEpIGNvdW50ZXJzLnNwbGljZShpZHgsIDEsIHZhbCArIDEpOwogICAgICAgICAgZWxzZSBpZiAoaWR4ID49IGRlcHRoKSBjb3VudGVycy5zcGxpY2UoaWR4LCAxLCAwKTsKICAgICAgICB9KTsKICAgICAgICBsZXQgbnVtYmVyaW5nID0gY291bnRlcnMuc2xpY2UoMCwgZGVwdGgpLmpvaW4oJy4nKSArICcuJzsKICAgICAgICBsZXQgbmV3U2x1ZyA9IHNsdWdpZnkoYCR7bnVtYmVyaW5nfSAke3B1cmVUaXRsZX1gKTsKICAgICAgICBsb2NhbEZpbGVNYXBbXCMke29sZFNsdWduXSA9IFwjJHtuZXdTbHVnfTsKICAgICAgfQogICAgfSk7CgogICAgY291bnRlcnMuZmlsbCgwKTsKICAgIGxldCBwcm9jZXNzZWRMaW5lcyA9IGxpbmVzLm1hcChsaW5lID0+IHsKICAgICAgY29uc3QgbWF0Y2ggPSBsaW5lLm1hdGNoKC9eKCN7MSw2fSlbIFx0XSsoLiopJC8pOwogICAgICBpZiAobWF0Y2gpIHsKICAgICAgICBjb25zdCBoYXNoZXMgPSBtYXRjaC5hdCgxKTsKICAgICAgICBsZXQgdGl0bGUgPSBtYXRjaC5hdCgyKS50cmltKCk7CiAgICAgICAgdGl0bGUgPSB0aXRsZS5yZXBsYWNlKC9eKFswLTldKyhcXC5bMC05XSspKlwcLz9bIFx0XSspL2csICcnKTsKICAgICAgICBsZXQgcGxhaW5UZXh0ID0gdGl0bGUucmVwbGFjZSgvXFwkXFwkL2csICcnKS5yZXBsYWNlKC9cXFxcdGV4dGNvbG9yXFx7W2EtekEtWl0rXFx9L2csICcnKS5yZXBsYWNlKC9cXFxcc3BhY2UvZywgJycpLnJlcGxhY2UoL1xcXFwmL2csICcnKS5yZXBsYWNlKC9bXFx7XFx9XS9nLCAnKS50cmltKCk7CiAgICAgICAgaWYgKHBsYWluVGV4dCA9PT0gJycpIHJldHVybiBsaW5lOwogICAgICAgIGlmIChpZ25vcmVkSGVhdGluZ3Muc29tZShpZ25vcmVkID0+IHBsYWluVGV4dC50b0xvd2VyQ2FzZSgpID09PSBpZ25vcmVkLnRvTG93ZXJDYXNlKCkpKSByZXR1cm4gaGFzaGVzICsgJyAnICsgdGl0bGU7CiAgICAgICAgY29uc3QgZGVwdGg9aGFzaGVzLmxlbmd0aDsKICAgICAgICBjb3VudGVycy5tYXAoKHZhbCwgaWR4KSA9PiB7CiAgICAgICAgICBpZiAoaWR4ID09PSBkZXB0aCAtIDEpIGNvdW50ZXJzLnNwbGljZShpZHgsIDEsIHZhbCArIDEpOwogICAgICAgICAgZWxzZSBpZiAoaWR4ID49IGRlcHRoKSBjb3VudGVycy5zcGxpY2UoaWR4LCAxLCAwKTsKICAgICAgICB9KTsKICAgICAgICBsZXQgbnVtYmVyaW5nID0gY291bnRlcnMuc2xpY2UoMCwgZGVwdGgpLmpvaW4oJy4nKSArICcuJzsKICAgICAgICByZXR1cm4gaGFzaGVzICsgJyAnICsgbnVtYmVyaW5nICsgJyAnICsgdGl0bGU7CiAgICAgIH0KICAgICAgcmV0dXJuIGxpbmU7CiAgICB9KTsKCiAgICBsZXQgZW50aXJlRG9jdW1lbnRUZXh0ID0gcHJvY2Vzc2VkTGluZXMuam9pbignXG4nKTsKICAgIE9iamVjdC5rZXlzKGdsb2JhbExpbmtNYXBzKS5mb3JFYWNoKGdsb2JhbFRhcmdldCA9PiB7CiAgICAgIGNvbnN0IGRlc3RpbmF0aW9uQW5jaG9yID0gZ2xvYmFsTGlua01hcHNbZ2xvYmFsVGFyZ2V0XTsKICAgICAgY29uc3QgZXNjYXBlZEdsb2JhbFRhcmdldCA9IGdsb2JhbFRhcmdldC5yZXBsYWNlKC9bLVwvXFxcXF5eJCorPy4oKXxbXF1cXHt9XS9nLCAnXFxcXCQmJyk7CiAgICAgIGNvbnN0IGNyb3NzTGlua1JlZ2V4ID0gbmV3IFJlZ0V4cCgnXFxcXF1cXFxcKCcgKyBlc2NhcGVkR2xvYmFsVGFyZ2V0ICsgJ1xcXFwpJywgJ2cnKTsKICAgICAgZW50aXJlRG9jdW1lbnRUZXh0ID0gZW50aXJlRG9jdW1lbnRUZXh0LnJlcGxhY2UoY3Jvc3NMaW5rUmVnZXgsICgpID0+ICddKCcgKyBkZXN0aW5hdGlvbkFuY2hvciArICcpJyk7CiAgICB9KTsKICAgIE9iamVjdC5rZXlzKGxvY2FsRmlsZU1hcCkuZm9yRWFjaChsb2NhbFRhcmdldCA9PiB7CiAgICAgIGNvbnN0IGRlc3RpbmF0aW9uQW5jaG9yID0gbG9jYWxGaWxlTWFwW2xvY2FsVGFyZ2V0XTsKICAgICAgY29uc3QgZXNjYXBlZExvY2FsVGFyZ2V0ID0gbG9jYWxUYXJnZXQucmVwbGFjZSgvWy1cL1xcXFxeXiQrPz4oKXxbdXF1XHt9XS9nLCAnXFxcXCQmJyk7CiAgICAgIGNvbnN0IGxvY2FsTGlua1JlZ2V4ID0gbmV3IFJlZ0V4cCgnXFxcXF1cXFxcKCcgKyBlc2NhcGVkTG9jYWxUYXJnZXQgKyAnXFxcXCDnLCAnZycpOwogICAgICBlbnRpcmVEb2N1bWVudFRleHQgPSBlbnRpcmVEb2N1bWVudFRleHQucmVwbGFjZShsb2NhbExpbmtSZWhleCwgKCkgPT4gJ10oJyArIGRlc3RpbmF0aW9uQW5jaG9yICsgJyknKTsKICAgIH0pOwogICAgZnMucndyaXRlRmlsZVN5bmMoZmlsZSwgZW50aXJlRG9jdW1lbnRUZXh0LCAndXRmOCcpOwogIH0gY2F0Y2ggKGVycikgeyBjb25zb2xlLmVycm9yKGBFcnJvciBhcHBseWluZyBjaGFuZ2VzIHRvIGZpbGUgJHtmaWxlfTpgLCBlcnIubWVzc2FnZSk7IH0KfSk7', 'base64').toString('utf8'), { flag: 'a' });
-          "
+          // Read all valid markdown pages across your wiki database, ignoring hidden structural templates
+          const files = fs.readdirSync('.').filter(f => f.endsWith('.md') && !f.startsWith('_'));
+          const ignoredHeadings = process.env.GLOBAL_IGNORED_HEADINGS.split('|');
+
+          // Helper function to simulate GitHub's native anchor slug generation logic
+          function slugify(text) {
+            return text
+              .toLowerCase()
+              .replace(/\$\$/g, '')
+              .replace(/\\textcolor\{[a-zA-Z]+\}/g, '')
+              .replace(/\\space/g, '')
+              .replace(/\\&/g, '')
+              .replace(/[\{\}]/g, '')
+              .replace(/[^a-z0-9\s-]/g, '') // Strips unlinked punctuation marks cleanly
+              .trim()
+              .replace(/[\s_]+/g, '-')      // Convert spaces/underscores to hyphens
+              .replace(/-+/g, '-');         // Deduplicate multiple trailing hyphens
+          }
+
+          // Global cross-reference graph container: tracks { 'Page-Name#old-slug': 'Page-Name#new-slug' }
+          let globalLinkMaps = {};
+
+          // =========================================================================
+          // PASS 1: SCAN ALL FILES & POPULATE CROSS-REFERENCE LINK RELATIONSHIPS
+          // =========================================================================
+          files.forEach(file => {
+            try {
+              let content = fs.readFileSync(file, 'utf8');
+              let lines = content.split(/\r?\n/);
+              let counters = new Array(6).fill(0); // Tracking metrics matrix for H1 through H6 layers
+              const pageName = path.basename(file, '.md');
+
+              lines.forEach(line => {
+                const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
+                if (match) {
+                  const hashes = match[1];
+                  let title = match[2].trim();
+
+                  // Clean off any old numbering sequences to compute the pure original slug (e.g., 1.2.3.)
+                  let pureTitle = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
+                  let oldSlug = slugify(pureTitle);
+
+                  // STRIP LATEX MATH STRINGS TEMPORARILY JUST FOR BLANK/IGNORE CHECKS
+                  let plainText = pureTitle
+                    .replace(/\$\$/g, '')
+                    .replace(/\\textcolor\{[a-zA-Z]+\}/g, '')
+                    .replace(/\\space/g, '')
+                    .replace(/\\&/g, '')
+                    .replace(/[\{\}]/g, '')
+                    .trim();
+
+                  // Safely bypass tracking logic if the heading matches exclusion rule boundaries
+                  if (plainText === '' || ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) {
+                    return; 
+                  }
+
+                  const depth = hashes.length;
+                  counters.forEach((val, idx) => {
+                    if (idx === depth - 1) counters[idx] = val + 1;
+                    else if (idx >= depth) counters[idx] = 0;
+                  });
+
+                  let numbering = counters.slice(0, depth).join('.') + '.';
+                  let newSlug = slugify(numbering + ' ' + pureTitle);
+
+                  // Store global maps tracking how this anchor transforms across your pages
+                  globalLinkMaps[pageName + '#' + oldSlug] = pageName + '#' + newSlug;
+                  
+                  // Resilient cross-reference backup matching configurations using spaces instead of hyphens
+                  const spacedPageName = pageName.replace(/-/g, ' ');
+                  globalLinkMaps[spacedPageName + '#' + oldSlug] = pageName + '#' + newSlug;
+                }
+              });
+            } catch (err) {
+              console.error('Error scanning structural headings for ' + file + ':', err.message);
+            }
+          });
+          // =========================================================================
+          // PASS 2: APPLY NUMBERING SCHEMES AND OVERWRITE LOCAL & CROSS-FILE LINKS
+          // =========================================================================
+          files.forEach(file => {
+            try {
+              let content = fs.readFileSync(file, 'utf8');
+              let lines = content.split(/\r?\n/);
+              let counters = new Array(6).fill(0); 
+              const pageName = path.basename(file, '.md');
+              let localFileMap = {};
+              
+              // Pre-calculate local slugs for this specific file context pass
+              lines.forEach(line => {
+                const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
+                if (match) {
+                  const hashes = match[1];
+                  let title = match[2].trim();
+                  let pureTitle = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
+                  let oldSlug = slugify(pureTitle);
+                  
+                  let plainText = pureTitle.replace(/\$\$/g, '').replace(/\\textcolor\{[a-zA-Z]+\}/g, '').replace(/\\space/g, '').replace(/\\&/g, '').replace(/[\{\}]/g, '').trim();
+                  if (plainText === '' || ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) return;
+
+                  const depth = hashes.length;
+                  counters.forEach((val, idx) => {
+                    if (idx === depth - 1) counters[idx] = val + 1;
+                    else if (idx >= depth) counters[idx] = 0;
+                  });
+                  let numbering = counters.slice(0, depth).join('.') + '.';
+                  let newSlug = slugify(numbering + ' ' + pureTitle);
+                  
+                  localFileMap['#' + oldSlug] = '#' + newSlug;
+                }
+              });
+
+              // Reset structural counter depth matrix for the actual heading update pass
+              counters.fill(0);
+
+              let processedLines = lines.map(line => {
+                const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
+                if (match) {
+                  const hashes = match[1];
+                  let title = match[2].trim();
+
+                  // Strip old numbering sequences out of headings first
+                  title = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
+
+                  let plainText = title
+                    .replace(/\$\$/g, '')
+                    .replace(/\\textcolor\{[a-zA-Z]+\}/g, '')
+                    .replace(/\\space/g, '')
+                    .replace(/\\&/g, '')
+                    .replace(/[\{\}]/g, '')
+                    .trim();
+
+                  if (plainText === '') return line;
+                  if (ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) {
+                    return hashes + ' ' + title;
+                  }
+
+                  const depth = hashes.length;
+                  counters.forEach((val, idx) => {
+                    if (idx === depth - 1) counters[idx] = val + 1;
+                    else if (idx >= depth) counters[idx] = 0;
+                  });
+
+                  let numbering = counters.slice(0, depth).join('.') + '.';
+                  return hashes + ' ' + numbering + ' ' + title;
+                }
+                return line;
+              });
+
+              // 🌐 THE REPLACEMENT MATRIX FIX: Swap strings across the entire file body text container at once
+              let entireDocumentText = processedLines.join('\n');
+
+              // First link repair sweep: Update external cross-file link pathways
+              Object.keys(globalLinkMaps).forEach(globalTarget => {
+                const destinationAnchor = globalLinkMaps[globalTarget];
+                const escapedGlobalTarget = globalTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                const crossLinkRegex = new RegExp('\\]\\(' + escapedGlobalTarget + '\\)', 'g');
+                entireDocumentText = entireDocumentText.replace(crossLinkRegex, () => '](' + destinationAnchor + ')');
+              });
+
+              // Second link repair sweep: Update inner local page links
+              Object.keys(localFileMap).forEach(localTarget => {
+                const destinationAnchor = localFileMap[localTarget];
+                const escapedLocalTarget = localTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                const localLinkRegex = new RegExp('\\]\\(' + escapedLocalTarget + '\\)', 'g');
+                entireDocumentText = entireDocumentText.replace(localLinkRegex, () => '](' + destinationAnchor + ')');
+              });
+
+              fs.writeFileSync(file, entireDocumentText, 'utf8');
+            } catch (err) {
+              console.error('Error applying reference updates to ' + file + ':', err.message);
+            }
+          });
+          EOF
 
           # Execute our perfectly compiled JavaScript cross-reference repair engine
           node parse-headings.js
@@ -75,14 +238,14 @@ jobs:
               # 🧹 THE ULTIMATE GHOST BUSTER FIX: 
               # Instantly deletes any empty list entries matching '* [](#)' or whitespace variants generated by markdown-toc
               sed -i -E '/^[[:space:]]*\*[[:space:]]*\[\]\(#\)[[:space:]]*$/d' "$file"
-
+              
               # 🧹 ADDITIONAL LAYER GHOST BUSTER FIX:
               # Targets and strips variant phantom entries containing trailing digits or hyphens like '* [](#-1)'
               sed -i -E '/^[[:space:]]*\*[[:space:]]*\[\]\(#-[0-9]+\)[[:space:]]*$/d' "$file"
               
-              # 🛠️ THE PLAIN-TEXT TOC FIX: Cleans the internal text inside links generated by markdown-toc
+              # 🎨 THE PLAIN-TEXT TOC FIX: Cleans the internal text inside links generated by markdown-toc
               # This strips math syntax elements only inside the [anchor text] sections of the TOC block
-              sed -i -E '/^[[:space:]]*\*/s/\\textcolor\{[a-zA-Z]+\}//g' "$file"
+              sed -i -E '/^[[:space:]]*\*-name:\s*Generate/!{/^[[:space:]]*\*/s/\\textcolor\{[a-zA-Z]+\}//g}' "$file"
               sed -i -E '/^[[:space:]]*\*/s/\\space//g' "$file"
               sed -i -E '/^[[:space:]]*\*/s/\\&/\&/g' "$file"
               sed -i -E '/^[[:space:]]*\*/s/\$\$//g' "$file"

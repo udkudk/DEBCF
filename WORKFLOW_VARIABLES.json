@@ -1,0 +1,28 @@
+{
+  "_comment_1": "==========================================================================================",
+  "_comment_2": "DEBCF WORKFLOW VARIABLES CONFIGURATION SCHEMA",
+  "_comment_3": "Naming Scheme Rule: Variables must use the pattern: <workflow-name>_<variable_name>",
+  "_comment_4": "This file is parsed dynamically by both remote GitHub Actions workflows and local pre-commit hooks.",
+  "_comment_5": "==========================================================================================",
+  
+  "stellaris-mod-framework-integrity-validation_EXCLUDE_DIRECTORIES": [
+    ".git",
+    ".github"
+  ],
+  "_comment_exclude_dirs": "List of whole folder trees that grep should skip entirely when scanning for naming budget breaches.",
+
+  "stellaris-mod-framework-integrity-validation_EXCLUDE_FILES": [
+    "*.md",
+    "DEBCF.code-workspace",
+    "descriptor.mod",
+    "LICENSE",
+    "NOTICE",
+    "thumbnail.png",
+    ".gitignore",
+    ".gitkeep",
+    "WORKFLOW_VARIABLES.json"
+  ],
+  "_comment_exclude_files": "Individual file patterns or asset layouts bypassed by validation sweeps to avoid false flags.",
+
+  "stellaris-mod-framework-integrity-validation_FRAMEWORK_OBJECT_CASINGS": "EVENT|ACTION|INLINE|SCEFFECT|SCTRIGGER|GUI|BUTTON|LOCKEY|SCRIPTEDLOC|GLOBALVAR|LOCALVAR|VARIABLE|GLOBALFLAG|SCOPEFLAG|GLOBALTARGET|TEMPTARGET|ERROR|POLICY|BUILDING|JOB|DISTRICT|DEPOSIT|RESOURCE|MARKET|ECONOMICCAT|STARBASE|RESOLUTION|FLEETTEMPL|THREATTYPE|GAMERULE|MESSAGE|SOLSYSTEM|SECTOR|CALENDAR|OVERWRITE|GFX|SOUND|CIVIC|TECHNOLOGY|TRADITION|PERK|ORIGIN|RELIC|COUNCILAGENDA|MANDATE|COUNCILPOSITION|LEADERROLE|LEADERCLASS|LEADERBACK|PERSONALITY|TRAIT|SPYOPERATION|ASTRALRIFT|RIFTINHABIT|ANOMALY|ARCHAEOLOGY|SPECIALPROJ|WEATHER|WEAPONCOMP|UTILITYCOMP|COMPONENTSET|CLOAKING|MEGABUILD|FACTION|AGREEMENT|BAZAAR"
+}

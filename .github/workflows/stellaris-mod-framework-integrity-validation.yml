@@ -1,8 +1,11 @@
 name: "Stellaris Mod Framework Integrity Validation"
 
+# Modify the "WORKFLOW_VARIABLES.json" file itself to modify following variables:
+# - stellaris-mod-framework-integrity-validation_EXCLUDE_DIRECTORIES: Excluded Directories
+# - stellaris-mod-framework-integrity-validation_EXCLUDE_FILES: Excluded Files
+# - stellaris-mod-framework-integrity-validation_FRAMEWORK_OBJECT_CASINGS: Checking casings that are used between DEBCF_<casing>_<custom_purpose> object names.
+
 on:
-  gollum: # This triggers the workflow every single time someone edits a Wiki page directly on GitHub!
-  workflow_dispatch: # Lets you run the workflow manually from the Actions tab.
   push:
     branches: 
       - "main"
@@ -17,13 +20,8 @@ on:
   pull_request:
     branches: 
       - "main"
-
-env:
-  # 1. Global Environmental Variables for Easy Modification
-  # Excluded directories separated by spaces (used natively by grep and find arguments)
-  EXCLUDE_DIRS: ".git .github"
-  # Excluded specific files separated by spaces
-  EXCLUDE_FILES: "*.md DEBCF.code-workspace descriptor.mod LICENSE NOTICE thumbnail.png .gitignore .gitkeep"
+  gollum: # This triggers the workflow every single time someone edits a Wiki page directly on GitHub!
+  workflow_dispatch: # Lets you run the workflow manually from the Actions tab.
 
 jobs:
   validate_save_file_character_budget:
@@ -37,12 +35,17 @@ jobs:
         run: |
           echo "Scanning all mod directory roots recursively for any DEBCF object identifiers exceeding the hard 64-character limit threshold..."
           
-          # Build grep exclusion patterns dynamically from env variables
+          # Target the specific renamed workflow variables config file in the ROOT directory
+          CONFIG_FILE="WORKFLOW_VARIABLES.json"
+          EXCLUDE_DIRS=$(jq -r '."stellaris-mod-framework-integrity-validation_EXCLUDE_DIRECTORIES" | join(" ")' $CONFIG_FILE)
+          EXCLUDE_FILES=$(jq -r '."stellaris-mod-framework-integrity-validation_EXCLUDE_FILES" | join(" ")' $CONFIG_FILE)
+
+          # Build grep exclusion patterns
           GREP_ARGS=""
-          for d in ${{ env.EXCLUDE_DIRS }}; do
+          for d in $EXCLUDE_DIRS; do
             GREP_ARGS="$GREP_ARGS --exclude-dir=$d"
           done
-          for f in ${{ env.EXCLUDE_FILES }}; do
+          for f in $EXCLUDE_FILES; do
             GREP_ARGS="$GREP_ARGS --exclude=$f"
           done
 
@@ -71,9 +74,13 @@ jobs:
             exit 0
           fi
 
-          # Sweeps strictly within the localisation/ folder path, filtering via env parameters
+          # Parse specific excluded files using updated root path prefix configuration
+          CONFIG_FILE="WORKFLOW_VARIABLES.json"
+          EXCLUDE_FILES=$(jq -r '."stellaris-mod-framework-integrity-validation_EXFILES" // ."stellaris-mod-framework-integrity-validation_EXCLUDE_FILES" | join(" ")' $CONFIG_FILE)
+
+          # Sweeps strictly within the localisation/ folder path, filtering via parameters
           FIND_ARGS=""
-          for f in ${{ env.EXCLUDE_FILES }}; do
+          for f in $EXCLUDE_FILES; do
             FIND_ARGS="$FIND_ARGS -not -name $f"
           done
 
@@ -103,15 +110,21 @@ jobs:
         run: |
           echo "Scanning all mod directories and file extensions completely to ensure custom target purpose string descriptors are strictly lowercase..."
           
+          # Parse updated prefixed workflow variables from the root config file
+          CONFIG_FILE="WORKFLOW_VARIABLES.json"
+          EXCLUDE_DIRS=$(jq -r '."stellaris-mod-framework-integrity-validation_EXCLUDE_DIRECTORIES" | join(" ")' $CONFIG_FILE)
+          EXCLUDE_FILES=$(jq -r '."stellaris-mod-framework-integrity-validation_EXCLUDE_FILES" | join(" ")' $CONFIG_FILE)
+          FRAMEWORK_OBJECT_TYPES=$(jq -r '."stellaris-mod-framework-integrity-validation_FRAMEWORK_OBJECT_CASINGS"' $CONFIG_FILE)
+
           GREP_ARGS=""
-          for d in ${{ env.EXCLUDE_DIRS }}; do
+          for d in $EXCLUDE_DIRS; do
             GREP_ARGS="$GREP_ARGS --exclude-dir=$d"
           done
-          for f in ${{ env.EXCLUDE_FILES }}; do
+          for f in $EXCLUDE_FILES; do
             GREP_ARGS="$GREP_ARGS --exclude=$f"
           done
 
-          INVALID_CASING=$(grep -rnoE "DEBCF_(EVENT|ACTION|INLINE|SCEFFECT|SCTRIGGER|GUI|BUTTON|LOCKEY|SCRIPTEDLOC|GLOBALVAR|LOCALVAR|VARIABLE|GLOBALFLAG|SCOPEFLAG|GLOBALTARGET|TEMPTARGET|ERROR|POLICY|BUILDING|JOB|DISTRICT|DEPOSIT|RESOURCE|MARKET|ECONOMICCAT|STARBASE|RESOLUTION|FLEETTEMPL|THREATTYPE|GAMERULE|MESSAGE|SOLSYSTEM|SECTOR|CALENDAR|OVERWRITE|GFX|SOUND|CIVIC|TECHNOLOGY|TRADITION|PERK|ORIGIN|RELIC|COUNCILAGENDA|MANDATE|COUNCILPOSITION|LEADERROLE|LEADERCLASS|LEADERBACK|PERSONALITY|TRAIT|SPYOPERATION|ASTRALRIFT|RIFTINHABIT|ANOMALY|ARCHAEOLOGY|SPECIALPROJ|WEATHER|WEAPONCOMP|UTILITYCOMP|COMPONENTSET|CLOAKING|MEGABUILD|FACTION|AGREEMENT|BAZAAR)_[A-Z0-9]+_[A-Z0-9_]*[A-Z]" . $GREP_ARGS || true)
+          INVALID_CASING=$(grep -rnoE "DEBCF_(${FRAMEWORK_OBJECT_TYPES})_[A-Z0-9]+_[A-Z0-9_]*[A-Z]" . $GREP_ARGS || true)
           if [ ! -z "$INVALID_CASING" ]; then
             echo "::error file=workflow::SYNTAX FAILURE: Found uppercase characters inside a dynamic purpose identifier block segment. Purpose segments must follow the lower_case format rules."
             echo "$INVALID_CASING"

@@ -1,0 +1,120 @@
+name: "Stellaris Mod Framework Integrity Validation"
+
+on:
+  gollum: # This triggers the workflow every single time someone edits a Wiki page directly on GitHub!
+  workflow_dispatch: # Lets you run the workflow manually from the Actions tab.
+  push:
+    branches: 
+      - "main"
+      - "dev"
+      - "dev-*"
+      - "dev/*"
+      - "*dev*"
+      - "development"
+      - "development-*"
+      - "development/*"
+      - "*development*"
+  pull_request:
+    branches: 
+      - "main"
+
+env:
+  # 1. Global Environmental Variables for Easy Modification
+  # Excluded directories separated by spaces (used natively by grep and find arguments)
+  EXCLUDE_DIRS: ".git .github"
+  # Excluded specific files separated by spaces
+  EXCLUDE_FILES: "*.md DEBCF.code-workspace descriptor.mod LICENSE NOTICE thumbnail.png .gitignore .gitkeep"
+
+jobs:
+  validate_save_file_character_budget:
+    name: "Check 64-Character Save Data ID Truncation Budget"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository Source Code"
+        uses: actions/checkout@v5
+
+      - name: "Scan Script Files for Long Character Budget Violation Signatures"
+        run: |
+          echo "Scanning all mod directory roots recursively for any DEBCF object identifiers exceeding the hard 64-character limit threshold..."
+          
+          # Build grep exclusion patterns dynamically from env variables
+          GREP_ARGS=""
+          for d in ${{ env.EXCLUDE_DIRS }}; do
+            GREP_ARGS="$GREP_ARGS --exclude-dir=$d"
+          done
+          for f in ${{ env.EXCLUDE_FILES }}; do
+            GREP_ARGS="$GREP_ARGS --exclude=$f"
+          done
+
+          VIOLATIONS=$(grep -rnoE "DEBCF_[A-Z0-9_]{57,}" . $GREP_ARGS || true)
+          if [ ! -z "$VIOLATIONS" ]; then
+            echo "::error file=workflow::CRITICAL FAILURE: Found framework object identifier strings exceeding the 64-character budget! These signatures will break save game indexing registers during runtime."
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "Success: All parsed framework object IDs fit safely within the save file character budget layout limits."
+
+  validate_localization_file_encoding:
+    name: "Enforce UTF-8 with BOM Text Byte Ordering Structure"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository Source Code"
+        uses: actions/checkout@v5
+
+      - name: "Inspect Localisation Files for Linux File System Byte Compliance Headers"
+        run: |
+          echo "Verifying that all .yml localisation files inside the localisation folder are encoded strictly as UTF-8 with BOM to protect Linux and SteamOS runtimes..."
+          ENCODING_ERRORS=0
+          
+          if [ ! -d "localisation" ]; then
+            echo "Warning: No localisation directory found to scan."
+            exit 0
+          fi
+
+          # Sweeps strictly within the localisation/ folder path, filtering via env parameters
+          FIND_ARGS=""
+          for f in ${{ env.EXCLUDE_FILES }}; do
+            FIND_ARGS="$FIND_ARGS -not -name $f"
+          done
+
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              if ! file "$file" | grep -q "BOM"; then
+                echo "::error file=$file::ENCODING FAILURE: Localisation file is missing the required UTF-8 Byte Order Mark (BOM) header compilation block."
+                ENCODING_ERRORS=$((ENCODING_ERRORS + 1))
+              fi
+            fi
+          done < <(find localisation -name "*.yml" -not -path '*/.*' $FIND_ARGS)
+          
+          if [ "$ENCODING_ERRORS" -gt 0 ]; then
+            echo "Critical Error: Found $ENCODING_ERRORS localisation files with invalid byte sequence configurations. Linux operating systems will drop descriptive tooltips."
+            exit 1
+          fi
+          echo "Success: All files in the localisation folder contain correct byte markers."
+
+  validate_lowercase_purpose_compliance:
+    name: "Verify Custom Purpose Identifier Case Architecture"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository Source Code"
+        uses: actions/checkout@v5
+
+      - name: "Enforce Casing Laws Across Dynamic Suffix Components"
+        run: |
+          echo "Scanning all mod directories and file extensions completely to ensure custom target purpose string descriptors are strictly lowercase..."
+          
+          GREP_ARGS=""
+          for d in ${{ env.EXCLUDE_DIRS }}; do
+            GREP_ARGS="$GREP_ARGS --exclude-dir=$d"
+          done
+          for f in ${{ env.EXCLUDE_FILES }}; do
+            GREP_ARGS="$GREP_ARGS --exclude=$f"
+          done
+
+          INVALID_CASING=$(grep -rnoE "DEBCF_(EVENT|ACTION|INLINE|SCEFFECT|SCTRIGGER|GUI|BUTTON|LOCKEY|SCRIPTEDLOC|GLOBALVAR|LOCALVAR|VARIABLE|GLOBALFLAG|SCOPEFLAG|GLOBALTARGET|TEMPTARGET|ERROR|POLICY|BUILDING|JOB|DISTRICT|DEPOSIT|RESOURCE|MARKET|ECONOMICCAT|STARBASE|RESOLUTION|FLEETTEMPL|THREATTYPE|GAMERULE|MESSAGE|SOLSYSTEM|SECTOR|CALENDAR|OVERWRITE|GFX|SOUND|CIVIC|TECHNOLOGY|TRADITION|PERK|ORIGIN|RELIC|COUNCILAGENDA|MANDATE|COUNCILPOSITION|LEADERROLE|LEADERCLASS|LEADERBACK|PERSONALITY|TRAIT|SPYOPERATION|ASTRALRIFT|RIFTINHABIT|ANOMALY|ARCHAEOLOGY|SPECIALPROJ|WEATHER|WEAPONCOMP|UTILITYCOMP|COMPONENTSET|CLOAKING|MEGABUILD|FACTION|AGREEMENT|BAZAAR)_[A-Z0-9]+_[A-Z0-9_]*[A-Z]" . $GREP_ARGS || true)
+          if [ ! -z "$INVALID_CASING" ]; then
+            echo "::error file=workflow::SYNTAX FAILURE: Found uppercase characters inside a dynamic purpose identifier block segment. Purpose segments must follow the lower_case format rules."
+            echo "$INVALID_CASING"
+            exit 1
+          fi
+          echo "Success: All parsed purpose suffix elements adhere perfectly to the standard lowercase conventions."

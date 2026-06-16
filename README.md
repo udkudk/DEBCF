@@ -1,4 +1,7 @@
-# README for DEBCF: Dynamic Event Booting &amp; Configuration Framework [![Tests](https://github.com/udkudk/DEBCF/actions/workflows/repository-wiki-header-numbering_and_toc-automation.yml/badge.svg)](https://github.com/udkudk/DEBCF/actions/workflows/repository-wiki-header-numbering_and_toc-automation.yml)
+# README for DEBCF: Dynamic Event Booting &amp; Configuration Framework 
+
+[![Tests](https://github.com/udkudk/DEBCF/actions/workflows/wiki-header-numbering_and_toc-automation.yml/badge.svg)](https://github.com/udkudk/DEBCF/actions/workflows/wiki-header-numbering_and_toc-automation.yml)
+[![Tests](https://github.com/udkudk/DEBCF/actions/workflows/stellaris-mod-framework-integrity-validation.yml/badge.svg)](https://github.com/udkudk/DEBCF/actions/workflows/stellaris-mod-framework-integrity-validation.yml)
 
 This is a mod for the video game $$\textcolor{aqua}{Stellaris}$$ by PDX. Please read the actual [Github Wiki](https://github.com/udkudk/DEBCF/wiki) for actual details.
 

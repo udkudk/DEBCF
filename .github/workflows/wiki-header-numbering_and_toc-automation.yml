@@ -1,4 +1,4 @@
-name: Repository Wiki TOC & Heading Numbering Automation
+name: Wiki TOC & Heading Numbering Automation
 
 on:
   gollum: # This triggers the workflow every single time someone edits a Wiki page directly on GitHub!

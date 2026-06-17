@@ -18,6 +18,7 @@
     "LICENSE",
     "NOTICE",
     "thumbnail.png",
+    ".gitattributes",
     ".gitignore",
     ".gitkeep",
     "WORKFLOW_VARIABLES.json"

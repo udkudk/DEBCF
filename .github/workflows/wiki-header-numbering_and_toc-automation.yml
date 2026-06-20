@@ -74,8 +74,23 @@ jobs:
               let lines = content.split(/\r?\n/);
               let counters = new Array(6).fill(0); // Tracking metrics matrix for H1 through H6 layers
               const pageName = path.basename(file, '.md');
-
+              
+              // Code block flag tracking state (handles `, ```, and ```` fence variations)
+              let insideCodeBlock = false;
+          
               lines.forEach(line => {
+                // Toggle block entry/exit when a code fence line is hit
+                if (line.trim().startsWith('`')) {
+                  const backtickCount = (line.trim().match(/^`+/) || [''])[0].length;
+                  if (backtickCount === 1 || backtickCount === 3 || backtickCount === 4) {
+                    insideCodeBlock = !insideCodeBlock;
+                    return; // Skip reading fence configuration lines altogether
+                  }
+                }
+                
+                // If we are deep inside a modding script code fence, ignore all '#' occurrences
+                if (insideCodeBlock) return;
+          
                 const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
                 if (match) {
                   const hashes = match[1];
@@ -93,7 +108,7 @@ jobs:
                     .replace(/\\&/g, '')
                     .replace(/[\{\}]/g, '')
                     .trim();
-
+          
                   // Safely bypass tracking logic if the heading matches exclusion rule boundaries
                   if (plainText === '' || ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) {
                     return; 
@@ -131,8 +146,19 @@ jobs:
               const pageName = path.basename(file, '.md');
               let localFileMap = {};
               
-              // Pre-calculate local slugs for this specific file context pass
+              // Code block track state for pre-calculating slugs
+              let insideCodeBlock = false;
+            
               lines.forEach(line => {
+                if (line.trim().startsWith('`')) {
+                  const backtickCount = (line.trim().match(/^`+/) || [''])[0].length;
+                  if (backtickCount === 1 || backtickCount === 3 || backtickCount === 4) {
+                    insideCodeBlock = !insideCodeBlock;
+                    return;
+                  }
+                }
+                if (insideCodeBlock) return;
+          
                 const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
                 if (match) {
                   const hashes = match[1];
@@ -155,10 +181,20 @@ jobs:
                 }
               });
 
-              // Reset structural counter depth matrix for the actual heading update pass
+              // Reset loop variables safely for the string-building transformation sweep
               counters.fill(0);
-
+              insideCodeBlock = false;
+          
               let processedLines = lines.map(line => {
+                if (line.trim().startsWith('`')) {
+                  const backtickCount = (line.trim().match(/^`+/) || [''])[0].length;
+                  if (backtickCount === 1 || backtickCount === 3 || backtickCount === 4) {
+                    insideCodeBlock = !insideCodeBlock;
+                    return line;
+                  }
+                }
+                if (insideCodeBlock) return line; // Do not manipulate internal script code comments
+          
                 const match = line.match(/^(#{1,6})[ \t]+(.*)$/);
                 if (match) {
                   const hashes = match[1];
@@ -166,15 +202,7 @@ jobs:
 
                   // Strip old numbering sequences out of headings first
                   title = title.replace(/^[0-9]+(\.[0-9]+)*\.?[ \t]+/, '');
-
-                  let plainText = title
-                    .replace(/\$\$/g, '')
-                    .replace(/\\textcolor\{[a-zA-Z]+\}/g, '')
-                    .replace(/\\space/g, '')
-                    .replace(/\\&/g, '')
-                    .replace(/[\{\}]/g, '')
-                    .trim();
-
+                  let plainText = title.replace(/\$\$/g, '').replace(/\\textcolor\{[a-zA-Z]+\}/g, '').replace(/\\space/g, '').replace(/\\&/g, '').replace(/[\{\}]/g, '').trim();
                   if (plainText === '') return line;
                   if (ignoredHeadings.some(ignored => plainText.toLowerCase() === ignored.toLowerCase())) {
                     return hashes + ' ' + title;
@@ -238,10 +266,14 @@ jobs:
               IGNORE_REGEX="^#[[:space:]]+($GLOBAL_IGNORED_HEADINGS)"
               
               # 🧮 HEADER EXTRACTION METRIC PASSTHROUGH: 
-              # 1. First, 'grep' grabs every line starting with 1 to 6 hash marks followed by spaces.
-              # 2. Next, 'grep -E -v' actively drops any lines that match your global excluded header list.
-              # 3. Finally, 'wc -l' counts up the remaining unignored content headers.
-              VALID_HEADERS_COUNT=$(grep -E '^#{1,6}[[:space:]]' "$file" | grep -E -v "$IGNORE_REGEX" | wc -l)
+              # 1. We use an awk parser sequence to drop anything wrapped between backtick fences entirely before running validation
+              # 2. 'grep' grabs every line starting with 1 to 6 hash marks followed by spaces.
+              # 3. 'grep -E -v' actively drops any lines that match your global excluded header list.
+              # 4. 'wc -l' counts up the remaining unignored content headers.
+              VALID_HEADERS_COUNT=$(awk '
+                /^[[:space:]]*`{1,4}/ { inside = !inside; next }
+                !inside { print }
+              ' "$file" | grep -E '^#{1,6}[[:space:]]' | grep -E -v "$IGNORE_REGEX" | wc -l)
               
               # 🚀 DYNAMIC INJECTION BRANCH: Only generate an index layout table if actionable sub-headings exist!
               if [ "$VALID_HEADERS_COUNT" -gt 0 ]; then

@@ -1,10 +1,19 @@
-############################################################################################################################################################################
+########################################################################################################################################################################################################
+#	See relevant Github Wiki Page(s):
+#		https://github.com/udkudk/DEBCF/wiki/Variables
 
-@DEBCF_GLOBALVAR_NOSCOPE_has_debcf_mod = 1	#	for Mod Compatibility
-#	This Mod Compatibility Variable is saved in the Stellaris Modding Den discord, Spreadsheet of mod compatibility variables file:
-#		https://docs.google.com/spreadsheets/d/1wbKhAVczL0By2F2D9dDy5WC-do3XqguNuj-dms9vzIo/edit?gid=0#gid=0
-#	The reason we use global scripted variables is because they are loaded during Game Engine Launch.
-#		Together with usage of Inline Scripts, you can configure normally unmodifiable files (such as buildings, districts etc...)
-#			to customise themselves according to existence of mods.
+@DEBCF_GVAR_NOSCOPE_has_debcf_mod = 1		#	for Mod Compatibility, See relevant Github Wiki Page: https://github.com/udkudk/DEBCF/wiki/Framework-Object-&-File-Database#21-scripted-global-variable-constants-gvar
 
-############################################################################################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+#	File End (for Linux/Mac/Windows CRLF/LF Compatibility)
+########################################################################################################################################################################################################

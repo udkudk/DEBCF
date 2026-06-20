@@ -1,0 +1,19 @@
+########################################################################################################################################################################################################
+#	See relevant Github Wiki Page(s):
+#		https://github.com/udkudk/DEBCF/wiki/Variables
+
+@DEBCF_GVAR_NOSCOPE_has_debcf_mod = 1		#	for Mod Compatibility, See relevant Github Wiki Page: https://github.com/udkudk/DEBCF/wiki/Framework-Object-&-File-Database#21-scripted-global-variable-constants-gvar
+
+
+
+
+
+
+
+
+
+
+
+
+#	File End (for Linux/Mac/Windows CRLF/LF Compatibility)
+########################################################################################################################################################################################################
